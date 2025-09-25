@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Morphing - Admin</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: white;
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      margin-bottom: 2rem;
+      color: #667eea;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .card {
+      background: #16213e;
+      padding: 1.5rem;
+      border-radius: 10px;
+      border: 1px solid #0f3460;
+    }
+    
+    .card h2 {
+      margin-bottom: 1rem;
+      color: #667eea;
+      font-size: 1.2rem;
+    }
+    
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #0f3460;
+    }
+    
+    .stat:last-child {
+      border-bottom: none;
+    }
+    
+    .stat-value {
+      font-weight: bold;
+      color: #26de81;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    
+    .btn-danger {
+      background: #ff4757;
+      color: white;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .queue-list {
+      background: #0f3460;
+      border-radius: 5px;
+      padding: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .queue-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      background: #16213e;
+      border-radius: 5px;
+    }
+    
+    .queue-item img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 5px;
+    }
+    
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 15px;
+      font-size: 0.85rem;
+    }
+    
+    .status-pending { background: #f39c12; }
+    .status-processing { background: #3498db; }
+    .status-completed { background: #26de81; }
+    .status-error { background: #ff4757; }
+    
+    .log {
+      background: #000;
+      padding: 1rem;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .log-entry {
+      margin-bottom: 0.5rem;
+      opacity: 0.8;
+    }
+    
+    .log-entry.error {
+      color: #ff4757;
+    }
+    
+    .log-entry.success {
+      color: #26de81;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Face Morphing Admin Panel</h1>
+    
+    <div class="grid">
+      <div class="card">
+        <h2>System Status</h2>
+        <div class="stat">
+          <span>Queue Length</span>
+          <span class="stat-value" id="queueLength">0</span>
+        </div>
+        <div class="stat">
+          <span>Processing</span>
+          <span class="stat-value" id="processing">0</span>
+        </div>
+        <div class="stat">
+          <span>Completed</span>
+          <span class="stat-value" id="completed">0</span>
+        </div>
+        <div class="stat">
+          <span>Errors</span>
+          <span class="stat-value" id="errors">0</span>
+        </div>
+        <div class="stat">
+          <span>Loop Version</span>
+          <span class="stat-value" id="loopVersion">0</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="actions">
+          <button class="btn-primary" id="refreshBtn">Refresh</button>
+          <button class="btn-danger" id="clearBtn">Clear All</button>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" id="downloadLoopBtn">Download Loop</button>
+          <button class="btn-primary" id="openDisplayBtn">Open Display</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="card">
+        <h2>Queue</h2>
+        <div class="queue-list" id="queueList"></div>
+      </div>
+      
+      <div class="card">
+        <h2>Activity Log</h2>
+        <div class="log" id="activityLog"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module">
+    let ws = null;
+    
+    // DOM elements
+    const queueLength = document.getElementById('queueLength');
+    const processing = document.getElementById('processing');
+    const completed = document.getElementById('completed');
+    const errors = document.getElementById('errors');
+    const loopVersion = document.getElementById('loopVersion');
+    const queueList = document.getElementById('queueList');
+    const activityLog = document.getElementById('activityLog');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadLoopBtn = document.getElementById('downloadLoopBtn');
+    const openDisplayBtn = document.getElementById('openDisplayBtn');
+    
+    // Add log entry
+    function addLog(message, type = '') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      activityLog.insertBefore(entry, activityLog.firstChild);
+      
+      // Keep only last 50 entries
+      while (activityLog.children.length > 50) {
+        activityLog.removeChild(activityLog.lastChild);
+      }
+    }
+    
+    // Initialize WebSocket
+    function initWebSocket() {
+      const wsUrl = `ws://${window.location.host}`;
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        addLog('Connected to server', 'success');
+      };
+      
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        handleWebSocketMessage(message);
+      };
+      
+      ws.onerror = (error) => {
+        addLog('WebSocket error', 'error');
+      };
+      
+      ws.onclose = () => {
+        addLog('Disconnected from server', 'error');
+        setTimeout(initWebSocket, 3000);
+      };
+    }
+    
+    // Handle WebSocket messages
+    function handleWebSocketMessage(message) {
+      switch (message.type) {
+        case 'queue_status':
+          updateStatus(message.data);
+          break;
+          
+        case 'new_photo':
+          addLog(`New photo added: ${message.data.id}`);
+          fetchStatus();
+          break;
+          
+        case 'processing_started':
+          addLog(`Processing started: ${message.data.photoId}`);
+          break;
+          
+        case 'processing_completed':
+          addLog(`Processing completed: ${message.data.photoId}`, 'success');
+          break;
+          
+        case 'processing_error':
+          addLog(`Processing error: ${message.data.photoId} - ${message.data.error}`, 'error');
+          break;
+          
+        case 'loop_updated':
+          addLog('Video loop updated', 'success');
+          break;
+          
+        case 'system_cleared':
+          addLog('System cleared', 'success');
+          fetchStatus();
+          break;
+      }
+    }
+    
+    // Update status display
+    function updateStatus(status) {
+      queueLength.textContent = status.queueLength || 0;
+      processing.textContent = status.processing || 0;
+      completed.textContent = status.completed || 0;
+      errors.textContent = status.errors || 0;
+    }
+    
+    // Fetch status
+    async function fetchStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        
+        updateStatus(data.queue);
+        
+        if (data.loop) {
+          loopVersion.textContent = data.loop.loopVersion || 0;
+        }
+        
+        // Fetch queue items
+        const queueResponse = await fetch('/api/queue');
+        const queueItems = await queueResponse.json();
+        updateQueueDisplay(queueItems);
+        
+      } catch (error) {
+        addLog('Failed to fetch status', 'error');
+      }
+    }
+    
+    // Update queue display
+    function updateQueueDisplay(items) {
+      queueList.innerHTML = '';
+      
+      if (items.length === 0) {
+        queueList.innerHTML = '<div style="text-align: center; opacity: 0.5;">Queue is empty</div>';
+        return;
+      }
+      
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'queue-item';
+        
+        const statusClass = `status-${item.status}`;
+        
+        div.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="/uploads/${item.id}.jpg" onerror="this.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="50" height="50" fill="%23666"%3E%3Crect width="50" height="50" /%3E%3C/svg%3E'">
+            <div>
+              <div>${item.id}</div>
+              <div style="font-size: 0.8rem; opacity: 0.7;">${new Date(item.timestamp).toLocaleTimeString()}</div>
+            </div>
+          </div>
+          <span class="status-badge ${statusClass}">${item.status}</span>
+        `;
+        
+        queueList.appendChild(div);
+      });
+    }
+    
+    // Button handlers
+    refreshBtn.addEventListener('click', () => {
+      fetchStatus();
+      addLog('Refreshed status');
+    });
+    
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to clear all data?')) return;
+      
+      try {
+        const response = await fetch('/api/admin/clear', { method: 'POST' });
+        if (response.ok) {
+          addLog('System cleared successfully', 'success');
+          fetchStatus();
+        }
+      } catch (error) {
+        addLog('Failed to clear system', 'error');
+      }
+    });
+    
+    downloadLoopBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/loop/current');
+        const data = await response.json();
+        
+        if (data.loopPath) {
+          window.open(data.loopPath, '_blank');
+          addLog('Downloading loop video');
+        } else {
+          addLog('No loop available', 'error');
+        }
+      } catch (error) {
+        addLog('Failed to download loop', 'error');
+      }
+    });
+    
+    openDisplayBtn.addEventListener('click', () => {
+      window.open('/display.html', '_blank');
+      addLog('Opened display window');
+    });
+    
+    // Initialize
+    initWebSocket();
+    fetchStatus();
+    
+    // Auto-refresh
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>

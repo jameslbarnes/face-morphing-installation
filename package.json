@@ -1,0 +1,30 @@
+{
+  "name": "face-morphing-installation",
+  "version": "1.0.0",
+  "description": "Interactive face morphing installation using Luma Dream Machine",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "nodemon server/index.js",
+    "client:dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "ws": "^8.16.0",
+    "sharp": "^0.33.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "nodemon": "^3.0.0",
+    "concurrently": "^8.2.0"
+  }
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Morphing - Capture</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="app">
+    <div class="capture-container">
+      <h1>Face Morphing Installation</h1>
+      
+      <div class="camera-view">
+        <video id="camera" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div class="countdown" id="countdown"></div>
+      </div>
+      
+      <div class="controls">
+        <button id="captureBtn" class="capture-btn">
+          <span class="btn-text">Take Selfie</span>
+          <span class="btn-icon">📸</span>
+        </button>
+      </div>
+      
+      <div class="status" id="status">
+        <div class="queue-info">
+          <span id="queuePosition"></span>
+        </div>
+      </div>
+      
+      <div class="preview" id="preview">
+        <img id="previewImg" />
+        <div class="preview-actions">
+          <button id="retakeBtn">Retake</button>
+          <button id="confirmBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="info-panel">
+      <h2>How it works</h2>
+      <ol>
+        <li>Take a selfie</li>
+        <li>AI creates smooth transition to previous photo</li>
+        <li>Watch your face morph on the display</li>
+      </ol>
+      
+      <div class="queue-status">
+        <h3>Queue Status</h3>
+        <div id="queueStats">
+          <div>Photos in queue: <span id="queueCount">0</span></div>
+          <div>Processing: <span id="processingCount">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/capture.js"></script>
+</body>
+</html>
